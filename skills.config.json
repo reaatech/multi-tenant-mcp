@@ -1,0 +1,46 @@
+{
+  "$schema": "./skills/config-schema.json",
+  "codeGeneration": {
+    "outputDir": "./src",
+    "templateDir": "./templates",
+    "includeTests": true,
+    "strictMode": true
+  },
+  "testing": {
+    "defaultCoverage": 90,
+    "testTimeout": 30000,
+    "unitPattern": "src/**/*.test.ts",
+    "integrationDir": "tests/integration",
+    "e2eDir": "tests/e2e"
+  },
+  "documentation": {
+    "apiOutputDir": "./docs/api",
+    "includePrivate": false,
+    "readmePath": "./README.md",
+    "changelogPath": "./CHANGELOG.md"
+  },
+  "security": {
+    "auditLevel": "high",
+    "failOnVulnerabilities": true,
+    "isolationTestCases": [
+      "cross-tenant-data-access",
+      "tenant-context-manipulation",
+      "shared-state-contamination"
+    ]
+  },
+  "performance": {
+    "maxLatencyMs": 5,
+    "benchmarkIterations": 10000,
+    "targets": {
+      "requestsPerSecond": 10000,
+      "concurrentTenants": 1000,
+      "rateLimitOpsPerSec": 50000
+    }
+  },
+  "buildRelease": {
+    "publishRegistry": "npm",
+    "createGithubRelease": true,
+    "dualBuild": true,
+    "sourcemap": true
+  }
+}
