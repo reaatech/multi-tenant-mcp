@@ -169,15 +169,13 @@ export const createMultiTenantMiddleware: CreateMultiTenantMiddleware = (
             }
 
             if (config.usageEmitter) {
-              void Promise.resolve(config.usageEmitter.emit(event)).catch(
-                (err: unknown) => {
-                  logger?.error("Usage event emission failed", {
-                    tenantId,
-                    itemName,
-                    error: String(err),
-                  });
-                }
-              );
+              void Promise.resolve(config.usageEmitter.emit(event)).catch((err: unknown) => {
+                logger?.error("Usage event emission failed", {
+                  tenantId,
+                  itemName,
+                  error: String(err),
+                });
+              });
             }
           }
         }

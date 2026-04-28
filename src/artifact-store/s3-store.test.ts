@@ -1,6 +1,14 @@
 import { describe, expect, it, vi } from "vitest";
 import { S3ArtifactStore } from "./s3-store.js";
 
+let s3Available = false;
+try {
+  await import("@aws-sdk/client-s3");
+  s3Available = true;
+} catch {
+  void 0;
+}
+
 function createMockS3Client() {
   const commands: Array<{ name: string; input: Record<string, unknown> }> = [];
 
@@ -44,10 +52,10 @@ function createMockS3Client() {
   };
 }
 
-describe("S3ArtifactStore", () => {
+describe.runIf(s3Available)("S3ArtifactStore", () => {
   it("should put an artifact", async () => {
     const client = createMockS3Client();
-    const store = new S3ArtifactStore(client as never, "my-bucket");
+    const store = new S3ArtifactStore(client, "my-bucket");
 
     const artifact = await store.put("t1", "data.json", '{"hello":"world"}', "application/json");
 
@@ -63,7 +71,7 @@ describe("S3ArtifactStore", () => {
 
   it("should get an artifact", async () => {
     const client = createMockS3Client();
-    const store = new S3ArtifactStore(client as never, "my-bucket");
+    const store = new S3ArtifactStore(client, "my-bucket");
 
     const data = await store.get("t1", "file.txt");
     expect(data.toString()).toBe("hello-s3");
@@ -71,7 +79,7 @@ describe("S3ArtifactStore", () => {
 
   it("should list artifacts for a tenant", async () => {
     const client = createMockS3Client();
-    const store = new S3ArtifactStore(client as never, "my-bucket");
+    const store = new S3ArtifactStore(client, "my-bucket");
 
     const list = await store.list("t1");
     expect(list).toHaveLength(2);
@@ -80,7 +88,7 @@ describe("S3ArtifactStore", () => {
 
   it("should delete an artifact", async () => {
     const client = createMockS3Client();
-    const store = new S3ArtifactStore(client as never, "my-bucket");
+    const store = new S3ArtifactStore(client, "my-bucket");
 
     await store.delete("t1", "file.txt");
 
@@ -91,7 +99,7 @@ describe("S3ArtifactStore", () => {
 
   it("should check existence", async () => {
     const client = createMockS3Client();
-    const store = new S3ArtifactStore(client as never, "my-bucket");
+    const store = new S3ArtifactStore(client, "my-bucket");
 
     const exists = await store.exists("t1", "file.txt");
     expect(exists).toBe(true);
@@ -108,7 +116,7 @@ describe("S3ArtifactStore", () => {
       return {};
     });
 
-    const store = new S3ArtifactStore(client as never, "my-bucket");
+    const store = new S3ArtifactStore(client, "my-bucket");
     const exists = await store.exists("t1", "missing.txt");
     expect(exists).toBe(false);
   });
@@ -122,13 +130,13 @@ describe("S3ArtifactStore", () => {
       return {};
     });
 
-    const store = new S3ArtifactStore(client as never, "my-bucket");
+    const store = new S3ArtifactStore(client, "my-bucket");
     await expect(store.exists("t1", "file.txt")).rejects.toThrow("NetworkError");
   });
 
   it("should sanitize metadata to strings", async () => {
     const client = createMockS3Client();
-    const store = new S3ArtifactStore(client as never, "my-bucket");
+    const store = new S3ArtifactStore(client, "my-bucket");
 
     await store.put("t1", "data.json", "data", "application/json", {
       version: 2,
@@ -144,7 +152,7 @@ describe("S3ArtifactStore", () => {
 
   it("should enforce byte quota", async () => {
     const client = createMockS3Client();
-    const store = new S3ArtifactStore(client as never, "my-bucket", "artifacts", {
+    const store = new S3ArtifactStore(client, "my-bucket", "artifacts", {
       maxBytes: 50,
       maxCount: 100,
     });
@@ -157,7 +165,7 @@ describe("S3ArtifactStore", () => {
   describe("path traversal", () => {
     it("rejects tenantIds with slashes or traversal", async () => {
       const client = createMockS3Client();
-      const store = new S3ArtifactStore(client as never, "my-bucket");
+      const store = new S3ArtifactStore(client, "my-bucket");
 
       await expect(store.put("a/b", "x", "y", "text/plain")).rejects.toThrow(/Invalid tenantId/);
       await expect(store.get("..", "x")).rejects.toThrow(/Invalid tenantId/);
@@ -165,7 +173,7 @@ describe("S3ArtifactStore", () => {
 
     it("rejects names with traversal segments", async () => {
       const client = createMockS3Client();
-      const store = new S3ArtifactStore(client as never, "my-bucket");
+      const store = new S3ArtifactStore(client, "my-bucket");
 
       await expect(store.get("t1", "../t2/secret")).rejects.toThrow(/Invalid artifact name/);
       await expect(store.put("t1", "../t2/file", "data", "text/plain")).rejects.toThrow(
@@ -175,7 +183,7 @@ describe("S3ArtifactStore", () => {
 
     it("rejects absolute names and NUL bytes", async () => {
       const client = createMockS3Client();
-      const store = new S3ArtifactStore(client as never, "my-bucket");
+      const store = new S3ArtifactStore(client, "my-bucket");
 
       await expect(store.get("t1", "/abs/path")).rejects.toThrow(/Invalid artifact name/);
       await expect(store.get("t1", "bad\0name")).rejects.toThrow(/NUL byte/);
@@ -184,7 +192,7 @@ describe("S3ArtifactStore", () => {
 
   it("should enforce count quota", async () => {
     const client = createMockS3Client();
-    const store = new S3ArtifactStore(client as never, "my-bucket", "artifacts", {
+    const store = new S3ArtifactStore(client, "my-bucket", "artifacts", {
       maxBytes: 10000,
       maxCount: 2,
     });

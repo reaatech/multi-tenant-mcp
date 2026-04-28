@@ -1,17 +1,47 @@
-import {
-  S3Client,
-  PutObjectCommand,
-  GetObjectCommand,
-  ListObjectsV2Command,
-  DeleteObjectCommand,
-  HeadObjectCommand,
-} from "@aws-sdk/client-s3";
 import type { Artifact, ArtifactStore, StorageQuota } from "./types.js";
 import {
   assertSafeArtifactName,
   assertSafeTenantId,
   resolveWithinTenantPrefix,
 } from "./path-safety.js";
+
+type S3CommandCtor = new (input: Record<string, unknown>) => { input: Record<string, unknown> };
+type S3SendClient = { send(command: unknown): Promise<Record<string, unknown>> };
+
+interface S3Commands {
+  PutObjectCommand: S3CommandCtor;
+  GetObjectCommand: S3CommandCtor;
+  ListObjectsV2Command: S3CommandCtor;
+  DeleteObjectCommand: S3CommandCtor;
+  HeadObjectCommand: S3CommandCtor;
+}
+
+let _commands: S3Commands | null = null;
+let _loadError: string | null = null;
+
+async function s3Commands(): Promise<S3Commands> {
+  if (_commands) return _commands;
+  if (_loadError) {
+    throw new Error(_loadError);
+  }
+  try {
+    const s3 = await import("@aws-sdk/client-s3");
+    _commands = {
+      PutObjectCommand: s3.PutObjectCommand as unknown as S3CommandCtor,
+      GetObjectCommand: s3.GetObjectCommand as unknown as S3CommandCtor,
+      ListObjectsV2Command: s3.ListObjectsV2Command as unknown as S3CommandCtor,
+      DeleteObjectCommand: s3.DeleteObjectCommand as unknown as S3CommandCtor,
+      HeadObjectCommand: s3.HeadObjectCommand as unknown as S3CommandCtor,
+    };
+    return _commands;
+  } catch (err) {
+    _loadError = err instanceof Error ? err.message : String(err);
+    throw new Error(
+      "@aws-sdk/client-s3 is an optional dependency required for S3ArtifactStore. " +
+        "Install it: pnpm add @aws-sdk/client-s3"
+    );
+  }
+}
 
 /**
  * S3-backed artifact store for production deployments.
@@ -20,7 +50,7 @@ import {
  */
 export class S3ArtifactStore implements ArtifactStore {
   constructor(
-    private readonly client: S3Client,
+    private readonly client: S3SendClient,
     private readonly bucket: string,
     private readonly prefix = "artifacts",
     private readonly quota?: StorageQuota
@@ -33,6 +63,7 @@ export class S3ArtifactStore implements ArtifactStore {
     contentType: string,
     metadata?: Record<string, unknown>
   ): Promise<Artifact> {
+    const { PutObjectCommand } = await s3Commands();
     const key = this.objectKey(tenantId, name);
     const body = typeof data === "string" ? Buffer.from(data) : data;
 
@@ -64,6 +95,7 @@ export class S3ArtifactStore implements ArtifactStore {
   }
 
   async get(tenantId: string, name: string): Promise<Buffer> {
+    const { GetObjectCommand } = await s3Commands();
     const key = this.objectKey(tenantId, name);
     const response = await this.client.send(
       new GetObjectCommand({
@@ -84,6 +116,7 @@ export class S3ArtifactStore implements ArtifactStore {
   }
 
   async list(tenantId: string, prefix?: string): Promise<Artifact[]> {
+    const { ListObjectsV2Command } = await s3Commands();
     assertSafeTenantId(tenantId);
     if (prefix !== undefined && prefix.length > 0) assertSafeArtifactName(prefix);
     const tenantPrefix = `${this.prefix}/${tenantId}/${prefix ?? ""}`;
@@ -99,27 +132,29 @@ export class S3ArtifactStore implements ArtifactStore {
         })
       );
 
-      for (const obj of response.Contents ?? []) {
-        if (!obj.Key || obj.Key.endsWith("/")) continue;
-        const name = obj.Key.slice(tenantPrefix.length);
+      const contents = response.Contents as Array<Record<string, unknown>> | undefined;
+      for (const obj of contents ?? []) {
+        if (!obj.Key || (obj.Key as string).endsWith("/")) continue;
+        const itemName = (obj.Key as string).slice(tenantPrefix.length);
         artifacts.push({
-          id: obj.Key,
+          id: obj.Key as string,
           tenantId,
-          name,
+          name: itemName,
           contentType: "application/octet-stream",
-          size: obj.Size ?? 0,
-          createdAt: obj.LastModified ?? new Date(),
-          updatedAt: obj.LastModified ?? new Date(),
+          size: typeof obj.Size === "number" ? obj.Size : 0,
+          createdAt: obj.LastModified instanceof Date ? obj.LastModified : new Date(),
+          updatedAt: obj.LastModified instanceof Date ? obj.LastModified : new Date(),
         });
       }
 
-      continuationToken = response.NextContinuationToken;
+      continuationToken = response.NextContinuationToken as string | undefined;
     } while (continuationToken);
 
     return artifacts;
   }
 
   async delete(tenantId: string, name: string): Promise<void> {
+    const { DeleteObjectCommand } = await s3Commands();
     const key = this.objectKey(tenantId, name);
     await this.client.send(
       new DeleteObjectCommand({
@@ -130,6 +165,7 @@ export class S3ArtifactStore implements ArtifactStore {
   }
 
   async exists(tenantId: string, name: string): Promise<boolean> {
+    const { HeadObjectCommand } = await s3Commands();
     const key = this.objectKey(tenantId, name);
     try {
       await this.client.send(
