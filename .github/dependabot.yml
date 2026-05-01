@@ -7,26 +7,44 @@ updates:
       day: "monday"
       time: "09:00"
       timezone: "America/Chicago"
-    open-pull-requests-limit: 10
-    versioning-strategy: "increase"
+    versioning-strategy: increase
+    allow:
+      - dependency-type: "direct"
+        update-types:
+          - "major"
+          - "patch"
+    groups:
+      production-deps:
+        dependency-type: "production"
+        update-types:
+          - "major"
+          - "patch"
+      development-deps:
+        dependency-type: "development"
+        update-types:
+          - "major"
+          - "patch"
     labels:
       - "dependencies"
-      - "npm"
+      - "dependabot"
     commit-message:
-      prefix: "chore"
-      prefix-development: "chore"
+      prefix: "chore(deps)"
+      prefix-development: "chore(dev-deps)"
       include: "scope"
-    groups:
-      typescript-eslint:
-        patterns:
-          - "@typescript-eslint/*"
-          - "typescript"
-          - "eslint"
-          - "@eslint/*"
-      testing:
-        patterns:
-          - "vitest"
-          - "@vitest/*"
-      types:
-        patterns:
-          - "@types/*"
+    open-pull-requests-limit: 10
+    rebase-strategy: "auto"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "America/Chicago"
+    labels:
+      - "dependencies"
+      - "github-actions"
+      - "dependabot"
+    commit-message:
+      prefix: "ci(actions)"
+      include: "scope"
