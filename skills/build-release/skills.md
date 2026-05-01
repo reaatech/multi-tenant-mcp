@@ -2,27 +2,26 @@
 
 ## Purpose
 
-Manage build and release processes for the multi-tenant-mcp project, ensuring consistent and reliable releases.
+Manage build and release processes for the multi-tenant-mcp monorepo, using tsup + Turborepo +
+Changesets for consistent and reliable releases.
 
 ## Capabilities
 
-- **TypeScript Build** — Build TypeScript project with proper configuration
-- **Package Validation** — Validate package contents and structure
-- **Release Notes Generation** — Generate release notes from changelog
-- **npm Publishing** — Publish package to npm registry
-- **Git Tag & Release** — Create git tags and GitHub releases
+- **Monorepo Build** — Build all packages with Turborepo (respects dependency graph)
+- **Package Validation** — Validate package contents, exports, and types
+- **Changeset Creation** — Create changesets for versioning and CHANGELOG generation
+- **npm Publishing** — Publish packages to npm via CI (changesets/action)
+- **GitHub Release** — Automated GitHub releases via the release workflow
 
 ## Input Parameters
 
 ```json
 {
-  "action": "build | validate-package | generate-release-notes | publish | create-release",
+  "action": "build | create-changeset | version-packages | release",
   "options": {
-    "version": "string",
     "bump": "major | minor | patch | prerelease",
-    "tag": "string",
-    "changelog": "boolean",
-    "publish": "boolean",
+    "package": "string",
+    "summary": "string",
     "dryRun": "boolean"
   }
 }
@@ -30,163 +29,93 @@ Manage build and release processes for the multi-tenant-mcp project, ensuring co
 
 ## Output
 
-- Build artifacts (JavaScript, type definitions, source maps)
-- Package validation report
-- Release notes with changes and contributors
-- Published package confirmation
-- Git tag and GitHub release details
+- Build artifacts in `packages/*/dist/` (ESM + CJS + type declarations)
+- Changeset `.md` file in `.changeset/`
+- Version bumps and CHANGELOG entries (via `changeset version`)
+- Published packages on npm + GitHub Packages (via CI release workflow)
 
 ## Usage Examples
 
-### Build Project
+### Build All Packages
 
 ```json
 {
-  "action": "build",
-  "options": {
-    "clean": true,
-    "sourcemap": true
-  }
+  "action": "build"
 }
 ```
 
-### Validate Package
+### Create a Changeset
 
 ```json
 {
-  "action": "validate-package",
+  "action": "create-changeset",
   "options": {
-    "checkFiles": true,
-    "checkDependencies": true,
-    "checkTypes": true
-  }
-}
-```
-
-### Generate Release Notes
-
-```json
-{
-  "action": "generate-release-notes",
-  "options": {
-    "version": "1.0.0",
-    "changelog": true
-  }
-}
-```
-
-### Create Full Release
-
-```json
-{
-  "action": "create-release",
-  "options": {
-    "version": "1.0.0",
-    "bump": "minor",
-    "changelog": true,
-    "publish": true,
-    "dryRun": false
+    "bump": "patch",
+    "package": "tenant-resolver",
+    "summary": "Fixed JWT audience validation"
   }
 }
 ```
 
 ## When to Invoke
 
-- Preparing a new release (patch, minor, or major)
-- Verifying package contents before publish
-- After merging a feature branch to `main`
+- After merging a feature branch to `main` (create changeset before merge)
+- Before opening a PR with new features or fixes
 - When CI build step fails
+- To bump versions and generate CHANGELOGs before release
 
 ## Invocation Actions
 
-1. Run `pnpm build` to compile TypeScript
-2. Run `pnpm validate:package` to check exports and files
-3. Run `pnpm release:notes` to generate changelog entries
-4. Run `pnpm publish:dry` to verify publish without side effects
+1. Build: `pnpm build` (Turborepo builds `types` first, then dependents)
+2. Create changeset: `pnpm changeset` (interactive CLI)
+3. Version bump: `pnpm version-packages` (consumes `.changeset/*.md` files)
+4. Release: `pnpm release` (builds then publishes via `changeset publish`)
+5. Type check: `pnpm typecheck` (uses `tsconfig.typecheck.json` with paths)
+6. Lint: `pnpm lint` (Biome check)
+7. Format: `pnpm format` (Biome format)
 
 ## Build Process
 
-### Pre-Build
-1. Clean previous build artifacts
-2. Validate TypeScript configuration
-3. Check for uncommitted changes (optional)
+### Per-Package Build (tsup)
+1. Entry: `src/index.ts` (barrel export)
+2. Output: ESM (`dist/index.js`), CJS (`dist/index.cjs`), types (`dist/index.d.ts`)
+3. Config: `--format cjs,esm --dts --clean`
 
-### Build
-1. Compile TypeScript to JavaScript
-2. Generate type definitions (.d.ts)
-3. Generate source maps
-4. Copy non-TypeScript assets (if any)
+### Monorepo Build (Turborepo)
+1. Build packages in dependency order (`^build`)
+2. Cache builds between invocations
+3. Output artifacts in each package's `dist/` directory
 
-### Post-Build
-1. Validate build output
-2. Run type checking on built files
-3. Generate package size report
+## Release Flow
 
-## Release Process
+1. **Create changeset**: `pnpm changeset` — pick packages, choose bump type, write summary
+2. **Commit changeset**: `git add .changeset/ && git commit -m "..."`
+3. **Merge to main**: CI opens/updates a "Version Packages" PR
+4. **Review & merge**: Version bumps + CHANGELOGs are committed
+5. **Publish**: CI publishes to npm and mirrors to GitHub Packages
 
-### Version Bumping
-- **Major** — Breaking changes (X.0.0)
-- **Minor** — New features (x.Y.0)
-- **Patch** — Bug fixes (x.y.Z)
-- **Prerelease** — Pre-release versions (x.y.z-0)
+For the first-publish bootstrap procedure, see the per-package publish flow in the Release Steps section.
 
-### Pre-Release Checklist
-- [ ] All tests passing
-- [ ] Code coverage requirements met
-- [ ] Linting passes
-- [ ] Type checking passes
-- [ ] Documentation updated
-- [ ] Changelog updated
-- [ ] No security vulnerabilities
+## Release Steps (Manual First Publish)
 
-### Release Steps
-1. Update version in package.json
-2. Generate changelog entries
-3. Create git commit with version bump
-4. Create git tag
-5. Push to GitHub
-6. Publish to npm
-7. Create GitHub release
+1. Verify: `pnpm install`, `pnpm build`, `pnpm test`, `pnpm typecheck`, `pnpm lint`
+2. Log in: `npm login`
+3. Publish each package: `cd packages/<name> && pnpm publish --access public --no-git-checks --otp=<code>`
+4. Verify: `curl https://registry.npmjs.org/@reaatech%2fmulti-tenant-mcp-<name>`
+5. Re-enable CI push trigger in `.github/workflows/release.yml`
 
 ## Package Validation
 
-### File Structure
-- Required files present (package.json, LICENSE, README)
-- Correct file extensions
-- No unexpected files
-
-### Dependencies
-- All dependencies declared
-- No missing peer dependencies
-- No dev dependencies in production
-
-### Type Definitions
-- All public APIs have types
-- Types are exported correctly
-- No type errors in built files
-
-### Package Size
-- Bundle size within limits
-- No unnecessary large files
-- Tree-shaking works correctly
-
-## Release Notes Format
-
-```markdown
-## [1.0.0] - YYYY-MM-DD
-
-### Added
-- New feature description (#PR_NUMBER)
-
-### Changed
-- Changed behavior description (#PR_NUMBER)
-
-### Fixed
-- Bug fix description (#PR_NUMBER)
-
-### Contributors
-- @contributor1, @contributor2
-```
+### Pre-Publish Checklist
+- [ ] All tests passing (`pnpm test`)
+- [ ] Type check passing (`pnpm typecheck`)
+- [ ] Lint passing (`pnpm lint`)
+- [ ] Build producing `dist/` in each package
+- [ ] No stray `.js`/`.d.ts` in `packages/*/src/`
+- [ ] Public packages have `publishConfig.access: "public"`
+- [ ] Private packages (`examples/*`, `e2e`) marked `"private": true`
+- [ ] All packages have `repository`, `homepage`, `bugs`, `license`, `author`
+- [ ] READMEs are publish-quality (badges, install, quick start, API reference)
 
 ## Configuration
 
@@ -203,7 +132,7 @@ Configured via `skills.config.json`:
 
 ## Error Handling
 
-- Build failure → Report with compilation errors
-- Validation failure → Report with specific issues
+- Build failure → Report with compilation errors per package
+- Validation failure → Report with specific issues per package
 - Publish failure → Rollback and report
-- Git operation failure → Report with git error details
+- Changeset conflict → Report with resolution steps

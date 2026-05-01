@@ -1,0 +1,26 @@
+{
+  "name": "multi-tenant-mcp-example-stdio",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Example: Multi-tenant MCP server with stdio transport",
+  "type": "module",
+  "scripts": {
+    "build": "tsup src/index.ts --format esm --clean",
+    "start": "node dist/index.js",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@reaatech/multi-tenant-mcp-types": "workspace:*",
+    "@reaatech/multi-tenant-mcp-tenant-resolver": "workspace:*",
+    "@reaatech/multi-tenant-mcp-rate-limiter": "workspace:*",
+    "@reaatech/multi-tenant-mcp-cost-accounting": "workspace:*",
+    "@reaatech/multi-tenant-mcp-observability": "workspace:*",
+    "@reaatech/multi-tenant-mcp-middleware": "workspace:*",
+    "@modelcontextprotocol/sdk": "^1.29.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsup": "^8.4.0",
+    "typescript": "^5.8.3"
+  }
+}

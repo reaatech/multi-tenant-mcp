@@ -2,7 +2,11 @@
 
 ## System Overview
 
-`multi-tenant-mcp` is designed as a composable middleware package that integrates with any MCP server implementation. It follows a layered architecture where each multi-tenancy concern is handled by a separate, independently testable module.
+`multi-tenant-mcp` is a pnpm workspace monorepo of composable TypeScript packages that layer
+multi-tenancy onto the [Model Context Protocol](https://modelcontextprotocol.io). Each package
+handles one concern (authentication, rate limiting, visibility, cost tracking, etc.). Compose
+them together with `createMultiTenantMiddleware` and drop them around any MCP server's request
+handlers.
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -22,8 +26,8 @@
 │                              ▼                              │
 │                    MCP Protocol Handler                     │
 └─────────────────────────────────────────────────────────────┘
-                               │
-                               ▼
+                                │
+                                ▼
 ┌─────────────────────────────────────────────────────────────┐
 │                    External Services                        │
 │  ┌─────────────┐ ┌─────────────┐ ┌─────────────────────────┐│
@@ -33,9 +37,38 @@
 └─────────────────────────────────────────────────────────────┘
 ```
 
+## Monorepo Packages
+
+Each concern is a standalone publishable package under `packages/`:
+
+| Package | Directory | Description |
+|---------|-----------|-------------|
+| `@reaatech/multi-tenant-mcp-types` | `packages/types` | Shared types, error codes, `BoundedMap` |
+| `@reaatech/multi-tenant-mcp-tenant-resolver` | `packages/tenant-resolver` | Tenant identity resolution |
+| `@reaatech/multi-tenant-mcp-rate-limiter` | `packages/rate-limiter` | Per-tenant rate limiting |
+| `@reaatech/multi-tenant-mcp-tool-visibility` | `packages/tool-visibility` | Visibility policies |
+| `@reaatech/multi-tenant-mcp-cost-accounting` | `packages/cost-accounting` | Cost tracking and billing |
+| `@reaatech/multi-tenant-mcp-artifact-store` | `packages/artifact-store` | Tenant-isolated storage |
+| `@reaatech/multi-tenant-mcp-config-isolation` | `packages/config-isolation` | Config validation and migration |
+| `@reaatech/multi-tenant-mcp-observability` | `packages/observability` | Logging and metrics |
+| `@reaatech/multi-tenant-mcp-middleware` | `packages/middleware` | Composable middleware composer |
+
+### Dependency Graph
+
+```
+types ◀── rate-limiter
+     ◀── cost-accounting
+     ◀── tenant-resolver
+     ◀── tool-visibility
+     ◀── artifact-store
+     ◀── config-isolation
+     ◀── observability ◀── tenant-resolver
+     ◀── middleware ◀── ALL of the above
+```
+
 ## Core Modules
 
-### 1. Tenant Resolver
+### 1. Tenant Resolver (`packages/tenant-resolver`)
 
 **Purpose:** Extract and validate tenant identity from incoming requests.
 
@@ -53,7 +86,7 @@
 Request → Auth Context → Tenant Resolver → TenantContext → Middleware Chain
 ```
 
-### 2. Rate Limiter
+### 2. Rate Limiter (`packages/rate-limiter`)
 
 **Purpose:** Enforce per-tenant rate limits to prevent resource abuse.
 
@@ -77,46 +110,34 @@ interface RateLimitConfig {
 }
 ```
 
-### 3. Tool Visibility Engine
+### 3. Tool Visibility Engine (`packages/tool-visibility`)
 
-**Purpose:** Control which MCP tools each tenant can access.
-
-**Interfaces:**
-- `ToolVisibilityPolicy` — Defines tool access rules
-- `ToolFilter` — Applies visibility rules to tool lists
+**Purpose:** Control which MCP tools, resources, and prompts each tenant can access.
 
 **Policy Types:**
-- **Allow-list** — Tenant sees only explicitly listed tools
-- **Deny-list** — Tenant sees all tools except explicitly denied ones
-- **Dynamic** — Tool visibility evaluated at runtime based on tenant state
+- **Allow-list** — Tenant sees only explicitly listed items
+- **Deny-list** — Tenant sees all items except explicitly denied ones
+- **Dynamic** — Item visibility evaluated at runtime based on tenant state
 
 **Example:**
 ```typescript
-// Tenant A: sees tools 1-5
-// Tenant B: sees tools 3-8
-const policies: Record<string, ToolVisibilityPolicy> = {
-  "tenant-a": { type: "allow", tools: ["tool-1", "tool-2", "tool-3", "tool-4", "tool-5"] },
-  "tenant-b": { type: "allow", tools: ["tool-3", "tool-4", "tool-5", "tool-6", "tool-7", "tool-8"] }
+const policies: Record<string, VisibilityPolicy> = {
+  'tenant-a': { type: 'allow', items: ['tool-1', 'tool-2', 'tool-3', 'tool-4', 'tool-5'] },
+  'tenant-b': { type: 'allow', items: ['tool-3', 'tool-4', 'tool-5', 'tool-6', 'tool-7', 'tool-8'] },
 };
 ```
 
-### 3b. Resource & Prompt Visibility
+The same allow-list / deny-list / dynamic patterns apply to resources
+(`resources/list`, `resources/read`) and prompts (`prompts/list`, `prompts/get`).
 
-MCP servers also expose `resources`, `resourceTemplates`, and `prompts`. These must be tenant-scoped for parity:
-
-- **`resources/list`** and **`resources/read`** — filtered by `ResourceVisibilityPolicy`
-- **`prompts/list`** and **`prompts/get`** — filtered by `PromptVisibilityPolicy`
-
-The same allow-list / deny-list / dynamic patterns apply. Resource URIs and prompt names are namespaced per tenant where applicable.
-
-### 4. Cost Accounting
+### 4. Cost Accounting (`packages/cost-accounting`)
 
 **Purpose:** Track tenant usage for billing and analytics.
 
 **Interfaces:**
 - `CostAccount` — Tracks costs for a tenant
 - `UsageEvent` — Represents a billable event
-- `PricingModel` — Defines pricing rules
+- `CostCalculator` — Defines pricing rules
 
 **Pricing Models:**
 - **Per-call** — Fixed cost per tool invocation
@@ -128,37 +149,20 @@ The same allow-list / deny-list / dynamic patterns apply. Resource URIs and prom
 Tool Call → Usage Event → Cost Calculator → Cost Account → Storage/Export
 ```
 
-**Example Pricing:**
-```typescript
-const pricing: PricingModel = {
-  toolCalls: { "tool-premium": 0.01, "tool-standard": 0.001 },
-  tokens: { input: 0.0005, output: 0.001 },
-  tiers: [
-    { upTo: 10000, discount: 0 },
-    { upTo: 100000, discount: 0.1 },
-    { upTo: Infinity, discount: 0.2 }
-  ]
-};
-```
-
-### 5. Artifact Store
+### 5. Artifact Store (`packages/artifact-store`)
 
 **Purpose:** Provide tenant-scoped storage for files and artifacts.
-
-**Interfaces:**
-- `ArtifactStore` — Storage backend interface
-- `Artifact` — Represents a stored artifact with metadata
 
 **Implementations:**
 - `FileSystemArtifactStore` — Local filesystem (development)
 - `S3ArtifactStore` — AWS S3 (production)
-- `DatabaseArtifactStore` — Database-backed (optional)
 
 **Isolation Strategy:**
 - Namespace prefixing: `artifacts/{tenant-id}/{artifact-id}`
+- Path traversal prevention built into the store layer
 - Access control enforced at middleware layer
 
-### 6. Config Isolation
+### 6. Config Isolation (`packages/config-isolation`)
 
 **Purpose:** Ensure tenant configurations are isolated and validated.
 
@@ -170,15 +174,24 @@ const pricing: PricingModel = {
 - Configurations loaded per-request with tenant context
 - No shared mutable state between tenants
 - Validation prevents invalid configurations
+- Base-config inheritance with per-tenant overrides
+- Versioned migration support via `ConfigMigrationRunner`
 
 ## MCP Protocol Integration
 
-The `@modelcontextprotocol/sdk` does not provide an Express-style `.use()` middleware pattern. Instead, `multi-tenant-mcp` integrates by **wrapping the `Server` request handlers** via a thin interceptor layer:
+The `@modelcontextprotocol/sdk` does not provide an Express-style `.use()` middleware pattern.
+Instead, `multi-tenant-mcp` integrates by **wrapping the `Server` request handlers** via a thin
+interceptor layer:
 
 ```typescript
-import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import { Server } from '@modelcontextprotocol/sdk/server/index.js';
+import { createMultiTenantMiddleware } from '@reaatech/multi-tenant-mcp-middleware';
+import { JWTTenantResolver, TenantContextStore } from '@reaatech/multi-tenant-mcp-tenant-resolver';
+import { DefaultRateLimiter, RedisRateLimitStore } from '@reaatech/multi-tenant-mcp-rate-limiter';
+import { DefaultCostCalculator, InMemoryCostTracker } from '@reaatech/multi-tenant-mcp-cost-accounting';
+import { S3ArtifactStore } from '@reaatech/multi-tenant-mcp-artifact-store';
 
-const server = new Server({ name: "my-server", version: "1.0.0" });
+const server = new Server({ name: 'my-server', version: '1.0.0' });
 const store = new TenantContextStore();
 
 const mt = createMultiTenantMiddleware({
@@ -191,12 +204,12 @@ const mt = createMultiTenantMiddleware({
 });
 
 // All handlers are registered through the middleware wrapper
-mt.handle(server, "tools/list", listToolsHandler);
-mt.handle(server, "tools/call", callToolHandler);
-mt.handle(server, "resources/list", listResourcesHandler);
-mt.handle(server, "resources/read", readResourceHandler);
-mt.handle(server, "prompts/list", listPromptsHandler);
-mt.handle(server, "prompts/get", getPromptHandler);
+mt.handle(server, 'tools/list', listToolsHandler);
+mt.handle(server, 'tools/call', callToolHandler);
+mt.handle(server, 'resources/list', listResourcesHandler);
+mt.handle(server, 'resources/read', readResourceHandler);
+mt.handle(server, 'prompts/list', listPromptsHandler);
+mt.handle(server, 'prompts/get', getPromptHandler);
 ```
 
 Under the hood, the wrapper:
@@ -211,14 +224,15 @@ Under the hood, the wrapper:
 
 ## Middleware Composition
 
-The middleware is designed to be composed into any MCP server by wrapping request handlers as shown above. Each primitive can be used independently or combined:
+The middleware is designed to be composed into any MCP server by wrapping request handlers as
+shown above. Each primitive can be used independently or combined:
 
 ```typescript
 // Use only tenant resolution + rate limiting
 const minimal = createMultiTenantMiddleware({
   tenantContextStore: store,
   rateLimiter: new DefaultRateLimiter(
-    new MemoryRateLimitStore({ requestsPerMinute: 100, tokensPerMinute: 10000 })
+    new MemoryRateLimitStore({ requestsPerMinute: 100, tokensPerMinute: 10000 }),
   ),
 });
 
@@ -230,7 +244,8 @@ const full = createMultiTenantMiddleware({ /* all options */ });
 
 ### Connection Lifecycle (SSE Transport)
 
-MCP over SSE maintains long-lived connections. Tenant identity is resolved once at connection time (during the `initialize` handshake) and cached for the duration of the connection:
+MCP over SSE maintains long-lived connections. Tenant identity is resolved once at connection time
+(during the `initialize` handshake) and cached for the duration of the connection:
 
 ```
 Client connects → initialize request → Tenant Resolution → TenantContext cached
@@ -247,7 +262,8 @@ For each request on an established connection:
 1. **Request Received** — MCP server receives incoming request
 2. **Tenant Context Retrieval** — Fetch cached tenant context (resolved at connection time)
 3. **Rate Limit Check** — Verify tenant hasn't exceeded limits
-4. **Visibility Filter** — Filter available tools/resources/prompts for tenant (list operations) or validate access (call/read/get operations)
+4. **Visibility Filter** — Filter available tools/resources/prompts for tenant (list operations)
+   or validate access (call/read/get operations)
 5. **Config Load** — Load tenant-specific configuration
 6. **Handler Execution** — Execute requested operation
 7. **Cost Accounting** — Record usage event asynchronously (non-blocking)
@@ -334,25 +350,27 @@ Emit Event (for billing/analytics)
 MCP supports streaming responses for long-running operations. The middleware handles this as follows:
 
 - **Rate limiting** is checked once at request entry, not on individual streamed chunks
-- **Cost accounting** emits `UsageEvent` asynchronously after the stream completes so it never blocks the response path
+- **Cost accounting** emits `UsageEvent` asynchronously after the stream completes so it never
+  blocks the response path
 - **Tenant context** remains stable for the duration of the stream (no mid-stream re-resolution)
 - **Visibility checks** happen before stream initiation, not per-chunk
 
 ## Error Handling
 
-MCP uses JSON-RPC 2.0 error responses, not HTTP status codes. The middleware maps failures to custom JSON-RPC error codes in the `-32000` to `-32099` range (server error reserved space):
+MCP uses JSON-RPC 2.0 error responses, not HTTP status codes. The middleware maps failures to
+custom JSON-RPC error codes in the `-32000` to `-32099` range (server error reserved space):
 
 ### JSON-RPC Error Mapping
 
 | Failure | JSON-RPC Code | Message | Meaning |
-|---|---|---|---|
-| Tenant resolution failure | `-32001` | `Unauthorized: tenant could not be resolved` | Invalid or missing auth |
-| Rate limit exceeded | `-32002` | `Too Many Requests: rate limit exceeded` | Quota exhausted |
-| Tool not visible | `-32003` | `Forbidden: tool not accessible to tenant` | Access denied |
-| Resource not visible | `-32004` | `Forbidden: resource not accessible to tenant` | Access denied |
-| Prompt not visible | `-32005` | `Forbidden: prompt not accessible to tenant` | Access denied |
-| Storage error | `-32603` | `Internal Error: storage operation failed` | Backend failure |
-| Config load failure | `-32603` | `Internal Error: configuration unavailable` | Backend failure |
+|---------|---------------|---------|---------|
+| Tenant resolution failure | `-32001` | `MiddlewareErrorCode.Unauthorized` | Invalid or missing auth |
+| Rate limit exceeded | `-32002` | `MiddlewareErrorCode.RateLimitExceeded` | Quota exhausted |
+| Tool not visible | `-32003` | `MiddlewareErrorCode.ToolForbidden` | Access denied |
+| Resource not visible | `-32004` | `MiddlewareErrorCode.ResourceForbidden` | Access denied |
+| Prompt not visible | `-32005` | `MiddlewareErrorCode.PromptForbidden` | Access denied |
+| Storage error | `-32603` | `MiddlewareErrorCode.InternalError` | Backend failure |
+| Config load failure | `-32603` | `MiddlewareErrorCode.InternalError` | Backend failure |
 
 ### Recovery Strategies
 - Graceful degradation when optional services unavailable
@@ -368,7 +386,7 @@ The system is designed for extension:
 - **Custom Tenant Resolvers** — Implement `TenantResolver` interface
 - **Custom Rate Limit Stores** — Implement `RateLimitStore` interface
 - **Custom Artifact Stores** — Implement `ArtifactStore` interface
-- **Custom Pricing Models** — Implement `PricingModel` interface
+- **Custom Pricing Models** — Implement `CostCalculator` interface
 
 ### Event System
 Emit events for external processing:
@@ -396,12 +414,12 @@ const store = new TenantContextStore();
 const middleware = createMultiTenantMiddleware({
   tenantContextStore: store,
   rateLimiter: new DefaultRateLimiter(
-    new RedisRateLimitStore(redis, { requestsPerMinute: 100, tokensPerMinute: 10000 })
+    new RedisRateLimitStore(redis, { requestsPerMinute: 100, tokensPerMinute: 10000 }),
   ),
   toolVisibility: policies,
   costCalculator: new DefaultCostCalculator(pricing),
   costTracker: new InMemoryCostTracker(),
-  artifactStore: new S3ArtifactStore(s3Client, "tenant-artifacts"),
+  artifactStore: new S3ArtifactStore(s3Client, 'tenant-artifacts'),
 });
 ```
 
@@ -445,19 +463,15 @@ API Gateway → Lambda Functions (with middleware) → Redis + S3 + DB
 ## Testing Strategy
 
 ### Unit Tests
-- Each module tested in isolation
+- Co-located with source: `src/foo.test.ts` in each package
 - Mock external dependencies
-- >90% code coverage target
+- Run via `pnpm test` (Turborepo orchestrates per-package vitest)
 
-### Integration Tests
-- Middleware composition tests
-- End-to-end request flow tests
+### Integration / E2E Tests
+- Live in `e2e/` workspace package
 - Multi-tenant isolation tests
-
-### Performance Tests
-- Rate limiting under load
-- Cost calculation accuracy
-- Storage operation latency
+- End-to-end request flow tests
+- Performance benchmarks
 
 ### Security Tests
 - Tenant isolation verification

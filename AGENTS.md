@@ -1,120 +1,137 @@
-# Agent Skills for multi-tenant-mcp
+# AGENTS.md — multi-tenant-mcp
 
-This document describes the AI agent skills available for developing and maintaining the `multi-tenant-mcp` project. These skills are designed to assist with various aspects of the development lifecycle.
+> Agent-focused guidance for contributing to this codebase.
 
-## Overview
+## Project Structure
 
-The project uses a skill-based agent system where each skill handles a specific domain of tasks. Skills are located in the `skills/` directory and can be invoked to perform automated or semi-automated tasks.
+This is a **pnpm workspace monorepo** managed with Turborepo.
 
-## Available Skills
+```
+packages/
+  types/              — Shared types, error codes, and LRU-bounded map
+  tenant-resolver/    — Tenant identity resolution from headers, JWTs, or API keys
+  rate-limiter/       — Per-tenant rate limiting with in-memory and Redis stores
+  tool-visibility/    — Allow/deny/dynamic visibility policies for tools, resources, prompts
+  cost-accounting/    — Per-call, per-token, and tiered cost tracking
+  artifact-store/     — Tenant-isolated artifact storage (filesystem + S3)
+  config-isolation/   — Per-tenant config with Zod validation and migration support
+  observability/      — Structured logging and per-tenant metrics
+  middleware/          — Composable multi-tenant middleware for MCP servers
+e2e/                   — End-to-end, security, and performance tests
+examples/
+  sse/                 — SSE transport example (Express)
+  stdio/               — Stdio transport example
+```
 
-### 1. Code Generation (`skills/code-generation/skills.md`)
+## Build System
 
-**Purpose:** Generate TypeScript code for multi-tenant-mcp modules.
+- **Package manager:** pnpm (required)
+- **Build tool:** tsup (per-package) + Turborepo (orchestration)
+- **Format/Lint:** Biome (not Prettier/ESLint)
+- **Test:** Vitest
+- **Versioning:** Changesets
+- **TypeScript:** Strict mode, ESM + CJS dual output
 
-**Capabilities:**
-- Generate module scaffolding from specifications
-- Create TypeScript interfaces and types
-- Implement middleware components
-- Generate test templates
+### Common Commands
 
-### 2. Testing (`skills/testing/skills.md`)
+```bash
+# Install all dependencies
+pnpm install
 
-**Purpose:** Manage test execution and coverage analysis.
+# Build everything
+pnpm build
 
-**Capabilities:**
-- Run unit tests with Vitest
-- Execute integration tests
-- Generate coverage reports
-- Analyze test coverage gaps
-- Create test data fixtures
+# Run all tests
+pnpm test
 
-### 3. Documentation (`skills/documentation/skills.md`)
+# Run tests with coverage
+pnpm test:coverage
 
-**Purpose:** Generate and maintain project documentation.
+# Lint & format
+pnpm lint
+pnpm lint:fix
+pnpm format
 
-**Capabilities:**
-- Generate API documentation from TypeScript types
-- Update README with feature changes
-- Create migration guides
-- Generate changelogs
-- Validate documentation consistency
+# Type-check without emit
+pnpm typecheck
 
-### 4. Security (`skills/security/skills.md`)
+# Create a changeset for versioning
+pnpm changeset
 
-**Purpose:** Perform security analysis and validation.
+# Clean all build outputs and node_modules
+pnpm clean
+```
 
-**Capabilities:**
-- Scan for security vulnerabilities
-- Validate tenant isolation boundaries
-- Check for data leakage risks
-- Audit authentication flows
-- Verify rate limiting implementation
+## Coding Conventions
 
-### 5. Performance (`skills/performance/skills.md`)
+1. **Runtime validation:** Use Zod for all external-facing data. Never trust raw JSON.
+2. **Error handling:** Use `MiddlewareError` from `@reaatech/multi-tenant-mcp-types`. Include
+   `MiddlewareErrorCode` enum values.
+3. **Types:** Prefer `type` over `interface` for data shapes. Keep `interface` for class contracts.
+4. **No `any`:** Biome is configured to error on `any`. Use `unknown` + narrowing instead.
+5. **Exports:** Always provide ESM + CJS dual output with `types` condition first in `exports`.
+6. **Imports:** Use package names (`@reaatech/multi-tenant-mcp-*`) for cross-package imports.
+   Never use relative `../../` paths between packages.
+7. **No `console.log`**: Use `ConsoleTenantLogger` from `@reaatech/multi-tenant-mcp-observability`
+   for all logging in library code.
 
-**Purpose:** Monitor and optimize performance.
+## Adding a New Package
 
-**Capabilities:**
-- Run performance benchmarks
-- Analyze latency profiles
-- Identify performance bottlenecks
-- Suggest optimizations
-- Monitor resource usage
+1. Create `packages/<name>/` with `package.json`, `tsconfig.json`, `vitest.config.ts`, `src/index.ts`
+2. Use `@reaatech/multi-tenant-mcp-types` for shared types. Do not duplicate schemas.
+3. Add workspace dependency entries in the package's `package.json` using `workspace:*`.
+4. Add path alias to `tsconfig.typecheck.json`.
+5. Run `pnpm install` from root to link workspace packages.
 
-### 6. Build & Release (`skills/build-release/skills.md`)
+### Package template
 
-**Purpose:** Manage build and release processes.
+```json
+{
+  "name": "@reaatech/multi-tenant-mcp-<name>",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": ["dist"],
+  "publishConfig": { "access": "public" },
+  "scripts": {
+    "build": "tsup src/index.ts --format cjs,esm --dts --clean",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "clean": "rm -rf dist"
+  }
+}
+```
 
-**Capabilities:**
-- Build TypeScript project
-- Validate package contents
-- Generate release notes
-- Publish to npm
-- Create git tags and releases
+## Testing
 
-## Skill Configuration
+- Unit tests live next to source files: `src/foo.test.ts`
+- E2E, security, and performance tests live in `e2e/`
+- Always run `pnpm test` before committing
+- Use `pnpm test:coverage` to check coverage
 
-Skills are configured in `skills.config.json` at the project root. Each skill has its own configuration section with options for behavior customization.
+## Release Flow
 
-## Using Skills with AI Assistants
+1. Create a changeset: `pnpm changeset` (interactive — pick packages, bump type, write summary)
+2. Commit the generated `.changeset/*.md` file
+3. On merge to `main`, CI opens a "Version Packages" PR via `changesets/action`
+4. Review the version bumps and auto-generated CHANGELOGs
+5. Merge the Version Packages PR → packages publish to npm + GitHub Packages
 
-AI assistants invoke skills by reading the relevant `skills/{topic}/skills.md` file and then executing the appropriate actions using available tools (e.g., `WriteFile`, `StrReplaceFile`, `Shell`).
+## Protocol Integration
 
-### Invocation Pattern
+This project wraps [MCP (Model Context Protocol)](https://modelcontextprotocol.io) servers. The
+middleware layer intercepts MCP request handlers (`tools/list`, `tools/call`, `resources/list`,
+`resources/read`, `prompts/list`, `prompts/get`) rather than providing Express-style `.use()`
+middleware. All middleware is registered via `middleware.handle(server, method, handler)`.
 
-1. **Identify the skill** needed for the current task (see mapping below)
-2. **Read the skill file** for context, constraints, and templates
-3. **Execute** using standard tools following the skill's guidelines
-4. **Validate** outputs against the skill's constraints
-
-### Skill-to-Task Mapping
-
-| Task | Skill File | Typical Actions |
-|---|---|---|
-| Scaffold a new module | `skills/code-generation/skills.md` | Write TS files, tests, barrel exports |
-| Tests fail or coverage drops | `skills/testing/skills.md` | Run `pnpm test`, analyze coverage |
-| Auth or isolation code changes | `skills/security/skills.md` | Audit boundaries, check for leaks |
-| Benchmark or optimize | `skills/performance/skills.md` | Run benchmarks, profile latency |
-| Update docs or changelog | `skills/documentation/skills.md` | Edit markdown, validate consistency |
-| Release or publish | `skills/build-release/skills.md` | Version bump, build, publish |
-
-## Best Practices
-
-- Skills should be idempotent when possible
-- Provide clear error messages
-- Log important actions
-- Validate inputs thoroughly
-- Handle failures gracefully
-- Document skill capabilities and limitations
-
-## Contributing
-
-When adding new skills:
-
-1. Create a markdown spec in `skills/` directory
-2. Document the skill in this file
-3. Add configuration options to `skills.config.json`
-4. Update the skill registry
-
-For questions about skills, open an issue or discussion.
+See [ARCHITECTURE.md](./ARCHITECTURE.md) for the full request pipeline, data flows, and security
+model.

@@ -2,7 +2,8 @@
 
 ## Purpose
 
-Monitor and optimize performance for the multi-tenant-mcp project, ensuring low-latency multi-tenant operations.
+Monitor and optimize performance for the multi-tenant-mcp monorepo, ensuring low-latency
+multi-tenant operations.
 
 ## Capabilities
 
@@ -19,6 +20,7 @@ Monitor and optimize performance for the multi-tenant-mcp project, ensuring low-
   "action": "benchmark | analyze-latency | identify-bottlenecks | monitor-resources",
   "options": {
     "target": "string",
+    "package": "string",
     "iterations": "number",
     "concurrent": "number",
     "duration": "number",
@@ -44,6 +46,7 @@ Monitor and optimize performance for the multi-tenant-mcp project, ensuring low-
   "action": "benchmark",
   "options": {
     "target": "rate-limiter",
+    "package": "rate-limiter",
     "iterations": 10000,
     "concurrent": 100,
     "warmup": 1000
@@ -58,6 +61,7 @@ Monitor and optimize performance for the multi-tenant-mcp project, ensuring low-
   "action": "analyze-latency",
   "options": {
     "target": "tenant-resolver",
+    "package": "tenant-resolver",
     "iterations": 5000,
     "percentiles": [50, 90, 95, 99]
   }
@@ -70,6 +74,7 @@ Monitor and optimize performance for the multi-tenant-mcp project, ensuring low-
 {
   "action": "identify-bottlenecks",
   "options": {
+    "package": "middleware",
     "scenario": "high-concurrency-multi-tenant",
     "duration": 60,
     "concurrent": 1000
@@ -77,32 +82,20 @@ Monitor and optimize performance for the multi-tenant-mcp project, ensuring low-
 }
 ```
 
-### Monitor Resource Usage
-
-```json
-{
-  "action": "monitor-resources",
-  "options": {
-    "duration": 300,
-    "interval": 1,
-    "metrics": ["cpu", "memory", "network", "disk"]
-  }
-}
-```
-
 ## When to Invoke
 
-- After optimizing or refactoring hot paths
+- After optimizing or refactoring hot paths in any package
 - When adding a new storage backend (Redis, S3, DB)
 - Before release to validate latency budgets
 - When CI performance benchmarks regress
+- Run benchmarks from `e2e/src/performance/`
 
 ## Invocation Actions
 
-1. Run `pnpm benchmark` for targeted benchmarks
-2. Run `pnpm benchmark:rate-limiter` for rate limit stress tests
-3. Profile latency with `pnpm benchmark:profile`
-4. Compare results against baselines in `benchmarks/baseline.json`
+1. Run e2e benchmarks: `pnpm turbo run test --filter=e2e`
+2. Run specific package tests: `pnpm turbo run test --filter=@reaatech/multi-tenant-mcp-<name>`
+3. Profile with Vitest benchmark mode
+4. Compare against baselines
 
 ## Performance Targets
 
@@ -144,46 +137,6 @@ Monitor and optimize performance for the multi-tenant-mcp project, ensuring low-
 - Realistic mix of operations (resolve, limit, filter, track)
 - Tests end-to-end performance
 
-## Metrics Collected
-
-### Latency Metrics
-- Request latency (total, per-operation)
-- Queue wait time
-- Database/Redis round-trip time
-
-### Throughput Metrics
-- Requests per second
-- Operations per second
-- Concurrent connections
-
-### Resource Metrics
-- CPU usage (user, system, wait)
-- Memory usage (heap, stack, external)
-- Network I/O (bytes in/out)
-- Disk I/O (read/write operations)
-
-### Error Metrics
-- Error rate by operation
-- Timeout rate
-- Retry rate
-
-## Analysis Methods
-
-### Statistical Analysis
-- Mean, median, percentiles (p50, p90, p95, p99)
-- Standard deviation and variance
-- Outlier detection
-
-### Trend Analysis
-- Performance over time
-- Resource usage patterns
-- Degradation detection
-
-### Comparative Analysis
-- Before/after optimization comparisons
-- Different configuration comparisons
-- Baseline vs. load comparisons
-
 ## Configuration
 
 Configured via `skills.config.json`:
@@ -191,8 +144,13 @@ Configured via `skills.config.json`:
 ```json
 {
   "performance": {
-    "maxLatency": 5,
-    "benchmarkIterations": 1000
+    "maxLatencyMs": 5,
+    "benchmarkIterations": 10000,
+    "targets": {
+      "requestsPerSecond": 10000,
+      "concurrentTenants": 1000,
+      "rateLimitOpsPerSec": 50000
+    }
   }
 }
 ```

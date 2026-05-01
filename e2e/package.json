@@ -1,0 +1,28 @@
+{
+  "name": "multi-tenant-mcp-e2e",
+  "version": "0.1.0",
+  "private": true,
+  "description": "End-to-end, security, and performance tests for multi-tenant-mcp",
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@reaatech/multi-tenant-mcp-types": "workspace:*",
+    "@reaatech/multi-tenant-mcp-tenant-resolver": "workspace:*",
+    "@reaatech/multi-tenant-mcp-rate-limiter": "workspace:*",
+    "@reaatech/multi-tenant-mcp-tool-visibility": "workspace:*",
+    "@reaatech/multi-tenant-mcp-cost-accounting": "workspace:*",
+    "@reaatech/multi-tenant-mcp-artifact-store": "workspace:*",
+    "@reaatech/multi-tenant-mcp-config-isolation": "workspace:*",
+    "@reaatech/multi-tenant-mcp-observability": "workspace:*",
+    "@reaatech/multi-tenant-mcp-middleware": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.8.3",
+    "vitest": "^3.1.1"
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@reaatech/multi-tenant-mcp-types": ["./packages/types/src/index.ts"],
+      "@reaatech/multi-tenant-mcp-tenant-resolver": ["./packages/tenant-resolver/src/index.ts"],
+      "@reaatech/multi-tenant-mcp-rate-limiter": ["./packages/rate-limiter/src/index.ts"],
+      "@reaatech/multi-tenant-mcp-tool-visibility": ["./packages/tool-visibility/src/index.ts"],
+      "@reaatech/multi-tenant-mcp-cost-accounting": ["./packages/cost-accounting/src/index.ts"],
+      "@reaatech/multi-tenant-mcp-artifact-store": ["./packages/artifact-store/src/index.ts"],
+      "@reaatech/multi-tenant-mcp-config-isolation": ["./packages/config-isolation/src/index.ts"],
+      "@reaatech/multi-tenant-mcp-observability": ["./packages/observability/src/index.ts"],
+      "@reaatech/multi-tenant-mcp-middleware": ["./packages/middleware/src/index.ts"]
+    }
+  },
+  "include": ["packages/*/src/**/*.ts", "examples/*/src/**/*.ts", "e2e/src/**/*.ts"],
+  "exclude": ["node_modules", "dist", "docs", "**/*.test.ts"]
+}

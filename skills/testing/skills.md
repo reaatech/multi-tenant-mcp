@@ -2,12 +2,12 @@
 
 ## Purpose
 
-Manage test execution and coverage analysis for the multi-tenant-mcp project.
+Manage test execution and coverage analysis for the multi-tenant-mcp monorepo.
 
 ## Capabilities
 
-- **Unit Test Execution** — Run unit tests with Vitest
-- **Integration Test Execution** — Run integration tests with test containers
+- **Unit Test Execution** — Run unit tests with Vitest per package
+- **E2E Test Execution** — Run end-to-end, security, and performance tests from `e2e/`
 - **Coverage Analysis** — Generate and analyze code coverage reports
 - **Coverage Gap Detection** — Identify untested code paths
 - **Test Data Generation** — Create test fixtures and mock data
@@ -16,14 +16,12 @@ Manage test execution and coverage analysis for the multi-tenant-mcp project.
 
 ```json
 {
-  "action": "run-tests | analyze-coverage | generate-fixtures",
+  "action": "run-tests | run-e2e | analyze-coverage | generate-fixtures",
   "options": {
     "coverage": "boolean",
     "watch": "boolean",
-    "testPathPattern": "string",
-    "testNamePattern": "string",
-    "bail": "boolean",
-    "threads": "number"
+    "package": "string",
+    "bail": "boolean"
   }
 }
 ```
@@ -37,7 +35,19 @@ Manage test execution and coverage analysis for the multi-tenant-mcp project.
 
 ## Usage Examples
 
-### Run All Tests with Coverage
+### Run All Tests
+
+```json
+{
+  "action": "run-tests",
+  "options": {
+    "coverage": false,
+    "watch": false
+  }
+}
+```
+
+### Run Tests with Coverage
 
 ```json
 {
@@ -49,68 +59,57 @@ Manage test execution and coverage analysis for the multi-tenant-mcp project.
 }
 ```
 
-### Run Specific Test File
+### Run E2E Tests
+
+```json
+{
+  "action": "run-e2e",
+  "options": {
+    "coverage": false
+  }
+}
+```
+
+### Run Tests for a Specific Package
 
 ```json
 {
   "action": "run-tests",
   "options": {
+    "package": "tenant-resolver",
     "coverage": false,
-    "testPathPattern": "tenant-resolver",
     "watch": false
-  }
-}
-```
-
-### Analyze Coverage Gaps
-
-```json
-{
-  "action": "analyze-coverage",
-  "options": {
-    "minimumCoverage": 90
-  }
-}
-```
-
-### Generate Test Fixtures
-
-```json
-{
-  "action": "generate-fixtures",
-  "options": {
-    "module": "rate-limiter",
-    "count": 100
   }
 }
 ```
 
 ## When to Invoke
 
-- After implementing or modifying any module
+- After implementing or modifying any package
 - When CI reports test failures
-- When coverage drops below the 90% threshold
+- When coverage drops below the threshold
 - Before opening a pull request
 - When generating test fixtures for multi-tenant scenarios
 
 ## Invocation Actions
 
-1. Run `pnpm test` for fast feedback
-2. Run `pnpm test:coverage` to check coverage gaps
-3. Run `pnpm test:integration` when Redis/DB changes are involved
-4. Generate or update fixtures in `tests/fixtures/`
+1. Run `pnpm test` for fast feedback (Turborepo orchestrates per-package vitest)
+2. Run `pnpm test:coverage` to check coverage gaps across all packages
+3. Run e2e tests: `pnpm turbo run test --filter=e2e`
+4. Run specific package: `pnpm turbo run test --filter=@reaatech/multi-tenant-mcp-<name>`
 
 ## Test Categories
 
 ### Unit Tests
-- Individual module testing in isolation
+- Co-located with source: `packages/*/src/<module>.test.ts`
 - Mock external dependencies
 - Fast execution (<100ms per test)
 
-### Integration Tests
-- Multi-module interaction testing
-- Real Redis/Database connections (test containers)
-- Medium execution time (<5s per test)
+### E2E / Integration Tests
+- Live in `e2e/src/` workspace package
+- End-to-end (`e2e/src/e2e/`), security (`e2e/src/security/`), performance (`e2e/src/performance/`)
+- Test fixtures in `e2e/fixtures/`
+- Use real external services where practical (Redis, S3)
 
 ### Security Tests
 - Tenant isolation verification

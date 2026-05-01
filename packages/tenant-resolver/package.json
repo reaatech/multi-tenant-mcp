@@ -1,0 +1,51 @@
+{
+  "name": "@reaatech/multi-tenant-mcp-tenant-resolver",
+  "version": "0.1.0",
+  "description": "Tenant identity resolution for multi-tenant MCP servers",
+  "license": "MIT",
+  "author": "Rick Somers <rick@reaatech.com> (https://reaatech.com)",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/reaatech/multi-tenant-mcp.git",
+    "directory": "packages/tenant-resolver"
+  },
+  "homepage": "https://github.com/reaatech/multi-tenant-mcp/tree/main/packages/tenant-resolver#readme",
+  "bugs": {
+    "url": "https://github.com/reaatech/multi-tenant-mcp/issues"
+  },
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": ["dist"],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsup src/index.ts --format cjs,esm --dts --clean",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@reaatech/multi-tenant-mcp-types": "workspace:*",
+    "zod": "^3.24.2"
+  },
+  "optionalDependencies": {
+    "jsonwebtoken": "^9.0.0"
+  },
+  "devDependencies": {
+    "@types/jsonwebtoken": "^9.0.7",
+    "@types/node": "^22.0.0",
+    "tsup": "^8.4.0",
+    "typescript": "^5.8.3",
+    "vitest": "^3.1.1"
+  }
+}
