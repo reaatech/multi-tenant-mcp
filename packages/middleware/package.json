@@ -1,0 +1,57 @@
+{
+  "name": "@reaatech/multi-tenant-mcp-middleware",
+  "version": "0.1.0",
+  "description": "Composable multi-tenant middleware for MCP servers",
+  "license": "MIT",
+  "author": "Rick Somers <rick@reaatech.com> (https://reaatech.com)",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/reaatech/multi-tenant-mcp.git",
+    "directory": "packages/middleware"
+  },
+  "homepage": "https://github.com/reaatech/multi-tenant-mcp/tree/main/packages/middleware#readme",
+  "bugs": {
+    "url": "https://github.com/reaatech/multi-tenant-mcp/issues"
+  },
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": ["dist"],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsup src/index.ts --format cjs,esm --dts --clean",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "clean": "rm -rf dist"
+  },
+  "peerDependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0"
+  },
+  "dependencies": {
+    "@reaatech/multi-tenant-mcp-types": "workspace:*",
+    "@reaatech/multi-tenant-mcp-tenant-resolver": "workspace:*",
+    "@reaatech/multi-tenant-mcp-rate-limiter": "workspace:*",
+    "@reaatech/multi-tenant-mcp-tool-visibility": "workspace:*",
+    "@reaatech/multi-tenant-mcp-cost-accounting": "workspace:*",
+    "@reaatech/multi-tenant-mcp-artifact-store": "workspace:*",
+    "@reaatech/multi-tenant-mcp-config-isolation": "workspace:*",
+    "@reaatech/multi-tenant-mcp-observability": "workspace:*",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsup": "^8.4.0",
+    "typescript": "^5.8.3",
+    "vitest": "^3.1.1"
+  }
+}
