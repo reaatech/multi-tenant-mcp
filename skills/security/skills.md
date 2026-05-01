@@ -2,7 +2,8 @@
 
 ## Purpose
 
-Perform security analysis and validation for the multi-tenant-mcp project, with a focus on tenant isolation and data protection.
+Perform security analysis and validation for the multi-tenant-mcp monorepo, with a focus on tenant
+isolation and data protection.
 
 ## Capabilities
 
@@ -19,6 +20,7 @@ Perform security analysis and validation for the multi-tenant-mcp project, with 
   "action": "run-audit | validate-isolation | check-leaks | audit-auth | verify-rate-limits",
   "options": {
     "focus": ["string"],
+    "packages": ["string"],
     "generateReport": "boolean",
     "failOnIssues": "boolean",
     "severityThreshold": "low | medium | high | critical"
@@ -72,6 +74,7 @@ Perform security analysis and validation for the multi-tenant-mcp project, with 
 {
   "action": "check-leaks",
   "options": {
+    "packages": ["observability", "middleware"],
     "focus": ["logs", "error-messages", "response-headers"],
     "generateReport": true
   }
@@ -84,6 +87,7 @@ Perform security analysis and validation for the multi-tenant-mcp project, with 
 {
   "action": "audit-auth",
   "options": {
+    "packages": ["tenant-resolver"],
     "flows": ["jwt-validation", "api-key-validation", "tenant-resolution"],
     "generateReport": true
   }
@@ -95,14 +99,17 @@ Perform security analysis and validation for the multi-tenant-mcp project, with 
 - After changes to tenant resolution, auth, or isolation code
 - Before any release or publish action
 - When adding a new storage backend or config store
-- When a PR touches `src/tenant-resolver/`, `src/rate-limiter/`, or `src/artifact-store/`
+- When a PR touches `packages/tenant-resolver/`, `packages/rate-limiter/`, or
+  `packages/artifact-store/`
 
 ## Invocation Actions
 
-1. Run static audit checklist (see below)
-2. Verify tenant isolation boundaries in changed files
-3. Check for PII in logs / error messages
-4. Validate that cost calculation remains server-side only
+1. Run dependency audit: `pnpm audit --audit-level moderate`
+2. Run e2e security tests: `pnpm turbo run test --filter=e2e`
+3. Verify tenant isolation boundaries in changed files
+4. Check for PII in logs / error messages
+5. Validate that cost calculation remains server-side only
+6. Review cross-package imports for isolation guarantees
 
 ## Security Focus Areas
 
@@ -135,11 +142,11 @@ Perform security analysis and validation for the multi-tenant-mcp project, with 
 
 ### Static Analysis
 - Code scanning for security patterns
-- Dependency vulnerability checking
+- Dependency vulnerability checking (`pnpm audit`)
 - Configuration security validation
 
 ### Dynamic Analysis
-- Runtime tenant isolation testing
+- E2E security tests in `e2e/src/security/`
 - Auth flow penetration testing
 - Rate limiting stress testing
 
@@ -155,7 +162,7 @@ Configured via `skills.config.json`:
 ```json
 {
   "security": {
-    "auditLevel": "high",
+    "auditLevel": "moderate",
     "failOnVulnerabilities": true
   }
 }

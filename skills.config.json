@@ -1,26 +1,22 @@
 {
   "$schema": "./skills/config-schema.json",
   "codeGeneration": {
-    "outputDir": "./src",
-    "templateDir": "./templates",
+    "outputDir": "./packages",
     "includeTests": true,
     "strictMode": true
   },
   "testing": {
     "defaultCoverage": 90,
     "testTimeout": 30000,
-    "unitPattern": "src/**/*.test.ts",
-    "integrationDir": "tests/integration",
-    "e2eDir": "tests/e2e"
+    "e2eDir": "e2e"
   },
   "documentation": {
     "apiOutputDir": "./docs/api",
     "includePrivate": false,
-    "readmePath": "./README.md",
-    "changelogPath": "./CHANGELOG.md"
+    "rootReadmePath": "./README.md"
   },
   "security": {
-    "auditLevel": "high",
+    "auditLevel": "moderate",
     "failOnVulnerabilities": true,
     "isolationTestCases": [
       "cross-tenant-data-access",
@@ -40,7 +36,6 @@
   "buildRelease": {
     "publishRegistry": "npm",
     "createGithubRelease": true,
-    "dualBuild": true,
-    "sourcemap": true
+    "dualBuild": true
   }
 }
