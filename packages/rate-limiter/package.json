@@ -39,7 +39,7 @@
     "zod": "^3.24.2"
   },
   "optionalDependencies": {
-    "redis": "^4.7.0"
+    "redis": "^5.12.1"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
