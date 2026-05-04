@@ -17,10 +17,10 @@
     "@reaatech/multi-tenant-mcp-observability": "workspace:*",
     "@reaatech/multi-tenant-mcp-middleware": "workspace:*",
     "@modelcontextprotocol/sdk": "^1.29.0",
-    "express": "^4.18.0"
+    "express": "^5.2.1"
   },
   "devDependencies": {
-    "@types/express": "^4.17.0",
+    "@types/express": "^5.0.6",
     "@types/node": "^22.0.0",
     "tsup": "^8.4.0",
     "typescript": "^5.8.3"
