@@ -1,7 +1,6 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "baseUrl": ".",
     "paths": {
       "@reaatech/multi-tenant-mcp-types": ["./packages/types/src/index.ts"],
       "@reaatech/multi-tenant-mcp-tenant-resolver": ["./packages/tenant-resolver/src/index.ts"],
