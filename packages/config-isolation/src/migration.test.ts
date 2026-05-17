@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { ConfigMigrationRunner } from './migration.js';
 import type { ConfigMigration } from './migration.js';
+import { ConfigMigrationRunner } from './migration.js';
 
 describe('ConfigMigrationRunner', () => {
   it('should apply migrations in order', () => {

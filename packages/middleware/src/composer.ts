@@ -1,6 +1,6 @@
 import type { Server } from '@modelcontextprotocol/sdk/server/index.js';
-import { VisibilityEngineImpl } from '@reaatech/multi-tenant-mcp-tool-visibility';
 import type { VisibilityEngine } from '@reaatech/multi-tenant-mcp-tool-visibility';
+import { VisibilityEngineImpl } from '@reaatech/multi-tenant-mcp-tool-visibility';
 import { MiddlewareError, MiddlewareErrorCode } from '@reaatech/multi-tenant-mcp-types';
 import type { CreateMultiTenantMiddleware, MultiTenantMiddleware } from './types.js';
 

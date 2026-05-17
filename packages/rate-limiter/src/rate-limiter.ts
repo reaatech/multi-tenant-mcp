@@ -1,4 +1,4 @@
-import type { RateLimitResult, RateLimitStore, RateLimiter } from './types.js';
+import type { RateLimiter, RateLimitResult, RateLimitStore } from './types.js';
 
 /**
  * Default rate limiter that wraps a {@link RateLimitStore} and a
