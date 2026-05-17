@@ -8,8 +8,10 @@ import type {
 } from '@reaatech/multi-tenant-mcp-cost-accounting';
 import type { MetricsCollector, TenantLogger } from '@reaatech/multi-tenant-mcp-observability';
 import type { RateLimiter } from '@reaatech/multi-tenant-mcp-rate-limiter';
-import type { TenantContextStore } from '@reaatech/multi-tenant-mcp-tenant-resolver';
-import type { TenantResolver } from '@reaatech/multi-tenant-mcp-tenant-resolver';
+import type {
+  TenantContextStore,
+  TenantResolver,
+} from '@reaatech/multi-tenant-mcp-tenant-resolver';
 import type {
   PromptVisibilityPolicy,
   ResourceVisibilityPolicy,

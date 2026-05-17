@@ -1,9 +1,8 @@
 import type { Server } from '@modelcontextprotocol/sdk/server/index.js';
-import { MemoryRateLimitStore } from '@reaatech/multi-tenant-mcp-rate-limiter';
-import { DefaultRateLimiter } from '@reaatech/multi-tenant-mcp-rate-limiter';
+import { DefaultRateLimiter, MemoryRateLimitStore } from '@reaatech/multi-tenant-mcp-rate-limiter';
 import { TenantContextStore } from '@reaatech/multi-tenant-mcp-tenant-resolver';
-import { MiddlewareErrorCode } from '@reaatech/multi-tenant-mcp-types';
 import type { TenantContext } from '@reaatech/multi-tenant-mcp-types';
+import { MiddlewareErrorCode } from '@reaatech/multi-tenant-mcp-types';
 import { describe, expect, it, vi } from 'vitest';
 import { createMultiTenantMiddleware } from './composer.js';
 import type { MultiTenantMiddlewareConfig } from './types.js';

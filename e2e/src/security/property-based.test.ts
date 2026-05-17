@@ -1,5 +1,5 @@
-import { DefaultCostCalculator } from '@reaatech/multi-tenant-mcp-cost-accounting';
 import type { CostAccount, UsageEvent } from '@reaatech/multi-tenant-mcp-cost-accounting';
+import { DefaultCostCalculator } from '@reaatech/multi-tenant-mcp-cost-accounting';
 import { describe, expect, it } from 'vitest';
 
 describe('Property-based: Cost calculation accuracy', () => {

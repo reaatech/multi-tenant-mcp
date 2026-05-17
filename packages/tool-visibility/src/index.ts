@@ -1,2 +1,2 @@
-export * from './types.js';
 export { VisibilityEngineImpl } from './engine.js';
+export * from './types.js';

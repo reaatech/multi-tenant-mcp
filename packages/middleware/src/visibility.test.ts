@@ -1,7 +1,7 @@
 import type { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { TenantContextStore } from '@reaatech/multi-tenant-mcp-tenant-resolver';
-import { MiddlewareErrorCode } from '@reaatech/multi-tenant-mcp-types';
 import type { TenantContext } from '@reaatech/multi-tenant-mcp-types';
+import { MiddlewareErrorCode } from '@reaatech/multi-tenant-mcp-types';
 import { describe, expect, it, vi } from 'vitest';
 import { createMultiTenantMiddleware } from './composer.js';
 
