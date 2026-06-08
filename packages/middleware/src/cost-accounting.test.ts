@@ -1,4 +1,5 @@
 import type { Server } from '@modelcontextprotocol/sdk/server/index.js';
+import type { Result } from '@modelcontextprotocol/sdk/types.js';
 import {
   CallbackUsageEmitter,
   DefaultCostCalculator,
@@ -9,7 +10,7 @@ import type { TenantContext } from '@reaatech/multi-tenant-mcp-types';
 import { describe, expect, it, vi } from 'vitest';
 import { createMultiTenantMiddleware } from './composer.js';
 
-type TestHandler = (req: unknown) => unknown;
+type TestHandler = (req: unknown) => Result;
 
 function createMockServer() {
   const handlers = new Map<string, TestHandler>();
@@ -72,7 +73,7 @@ describe('Cost accounting middleware integration', () => {
       tenantContextStore: store,
       costCalculator: calculator,
       costTracker: tracker,
-      tokenExtractor: (result: unknown) => {
+      tokenExtractor: (result: Result) => {
         const r = result as { usage?: { inputTokens: number; outputTokens: number } };
         return r.usage;
       },

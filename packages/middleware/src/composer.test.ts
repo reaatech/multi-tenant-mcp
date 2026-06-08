@@ -1,4 +1,5 @@
 import type { Server } from '@modelcontextprotocol/sdk/server/index.js';
+import type { Result } from '@modelcontextprotocol/sdk/types.js';
 import { DefaultRateLimiter, MemoryRateLimitStore } from '@reaatech/multi-tenant-mcp-rate-limiter';
 import { TenantContextStore } from '@reaatech/multi-tenant-mcp-tenant-resolver';
 import type { TenantContext } from '@reaatech/multi-tenant-mcp-types';
@@ -7,7 +8,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { createMultiTenantMiddleware } from './composer.js';
 import type { MultiTenantMiddlewareConfig } from './types.js';
 
-type WrappedHandler = (req: unknown) => Promise<unknown>;
+type WrappedHandler = (req: unknown) => Promise<Result>;
 
 const mockServer = (): {
   server: Server;
