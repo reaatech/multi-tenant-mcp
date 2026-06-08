@@ -7,19 +7,27 @@ describe('RedisRateLimitStore', () => {
     return {
       mGet: vi.fn(async (keys: string[]) => keys.map((k) => data.get(k) ?? null)),
       multi: vi.fn(() => ({
-        incr: vi.fn(function (this: { commands: unknown[] }, key: string) {
+        incr: vi.fn(function (this: { commands: Array<[string, ...unknown[]]> }, key: string) {
           this.commands.push(['incr', key]);
           return this;
         }),
-        incrBy: vi.fn(function (this: { commands: unknown[] }, key: string, amount: number) {
+        incrBy: vi.fn(function (
+          this: { commands: Array<[string, ...unknown[]]> },
+          key: string,
+          amount: number,
+        ) {
           this.commands.push(['incrBy', key, amount]);
           return this;
         }),
-        pExpire: vi.fn(function (this: { commands: unknown[] }, key: string, ms: number) {
+        pExpire: vi.fn(function (
+          this: { commands: Array<[string, ...unknown[]]> },
+          key: string,
+          ms: number,
+        ) {
           this.commands.push(['pExpire', key, ms]);
           return this;
         }),
-        exec: vi.fn(async function (this: { commands: unknown[] }) {
+        exec: vi.fn(async function (this: { commands: Array<[string, ...unknown[]]> }) {
           for (const cmd of this.commands) {
             if (cmd[0] === 'incr' || cmd[0] === 'incrBy') {
               const key = cmd[1] as string;
@@ -31,7 +39,7 @@ describe('RedisRateLimitStore', () => {
           this.commands = [];
           return [];
         }),
-        commands: [] as unknown[],
+        commands: [] as Array<[string, ...unknown[]]>,
       })),
       _data: data,
     };

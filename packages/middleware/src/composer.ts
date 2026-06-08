@@ -1,13 +1,14 @@
 import type { Server } from '@modelcontextprotocol/sdk/server/index.js';
+import type { Result } from '@modelcontextprotocol/sdk/types.js';
 import type { VisibilityEngine } from '@reaatech/multi-tenant-mcp-tool-visibility';
 import { VisibilityEngineImpl } from '@reaatech/multi-tenant-mcp-tool-visibility';
 import { MiddlewareError, MiddlewareErrorCode } from '@reaatech/multi-tenant-mcp-types';
 import type { CreateMultiTenantMiddleware, MultiTenantMiddleware } from './types.js';
 
-type RawHandler = (request: unknown) => unknown | Promise<unknown>;
+type RawHandler = (request: unknown) => Result | Promise<Result>;
 
 interface MCPRegistration {
-  setRequestHandler(method: string, handler: (request: unknown) => Promise<unknown>): void;
+  setRequestHandler(method: string, handler: (request: unknown) => Promise<Result>): void;
 }
 
 export const createMultiTenantMiddleware: CreateMultiTenantMiddleware = (
@@ -177,35 +178,44 @@ export const createMultiTenantMiddleware: CreateMultiTenantMiddleware = (
   };
 };
 
-async function filterListResult(
-  result: unknown,
+async function filterListResult<T>(
+  result: T,
   engine: VisibilityEngine,
   tenantId: string,
   listKey: string,
   itemKey: string,
-): Promise<unknown> {
-  const typed = result as Record<string, Array<Record<string, string>> | undefined>;
-  const items = typed[listKey];
-  if (items) {
-    const names = items.map((item) => item[itemKey]);
+): Promise<T> {
+  if (typeof result !== 'object' || result === null) return result;
+  const obj = result as Record<string, unknown>;
+  const items = obj[listKey];
+  if (Array.isArray(items)) {
+    const names = (items as Array<Record<string, unknown>>).map((item) =>
+      String(item[itemKey] ?? ''),
+    );
     const visible = await engine.filter(names, tenantId);
     return {
-      ...typed,
-      [listKey]: items.filter((item) => visible.includes(item[itemKey])),
-    };
+      ...obj,
+      [listKey]: (items as Array<Record<string, unknown>>).filter((item) =>
+        visible.includes(String(item[itemKey] ?? '')),
+      ),
+    } as T;
   }
-  return typed;
+  return result;
 }
 
 function extractItemName(method: string, request: unknown): string | undefined {
-  const req = request as { params?: { name?: string; uri?: string } };
+  if (!request || typeof request !== 'object') return undefined;
+  const req = request as Record<string, unknown>;
+  const params = req.params;
+  if (!params || typeof params !== 'object') return undefined;
+  const p = params as Record<string, unknown>;
   switch (method) {
     case 'tools/call':
-      return req.params?.name;
+      return typeof p.name === 'string' ? p.name : undefined;
     case 'resources/read':
-      return req.params?.uri;
+      return typeof p.uri === 'string' ? p.uri : undefined;
     case 'prompts/get':
-      return req.params?.name;
+      return typeof p.name === 'string' ? p.name : undefined;
     default:
       return undefined;
   }

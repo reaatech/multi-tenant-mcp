@@ -6,7 +6,9 @@ import {
 import type { Artifact, ArtifactStore, StorageQuota } from './types.js';
 
 type S3CommandCtor = new (input: Record<string, unknown>) => { input: Record<string, unknown> };
-type S3SendClient = { send(command: unknown): Promise<Record<string, unknown>> };
+type S3SendClient = {
+  send(command: { input: Record<string, unknown> }): Promise<Record<string, unknown>>;
+};
 
 interface S3Commands {
   PutObjectCommand: S3CommandCtor;

@@ -1,4 +1,5 @@
 import type { Server } from '@modelcontextprotocol/sdk/server/index.js';
+import type { Result } from '@modelcontextprotocol/sdk/types.js';
 import type { ArtifactStore } from '@reaatech/multi-tenant-mcp-artifact-store';
 import type { TenantConfigStore } from '@reaatech/multi-tenant-mcp-config-isolation';
 import type {
@@ -29,7 +30,7 @@ export interface MultiTenantMiddlewareConfig {
   readonly usageEmitter?: UsageEventEmitter;
   readonly costTracker?: CostTracker;
   readonly tokenExtractor?: (
-    result: unknown,
+    result: Result,
   ) => { inputTokens?: number; outputTokens?: number } | undefined;
   readonly artifactStore?: ArtifactStore;
   readonly configStore?: TenantConfigStore;
@@ -37,7 +38,7 @@ export interface MultiTenantMiddlewareConfig {
   readonly metrics?: MetricsCollector;
 }
 
-export type RequestHandler = (request: unknown) => unknown | Promise<unknown>;
+export type RequestHandler = (request: unknown) => Result | Promise<Result>;
 
 export interface MultiTenantMiddleware {
   handle(server: Server, method: string, handler: RequestHandler): void;

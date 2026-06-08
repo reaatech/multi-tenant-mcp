@@ -1,11 +1,12 @@
 import type { Server } from '@modelcontextprotocol/sdk/server/index.js';
+import type { Result } from '@modelcontextprotocol/sdk/types.js';
 import { TenantContextStore } from '@reaatech/multi-tenant-mcp-tenant-resolver';
 import type { TenantContext } from '@reaatech/multi-tenant-mcp-types';
 import { MiddlewareErrorCode } from '@reaatech/multi-tenant-mcp-types';
 import { describe, expect, it, vi } from 'vitest';
 import { createMultiTenantMiddleware } from './composer.js';
 
-type TestHandler = (req: unknown) => unknown;
+type TestHandler = (req: unknown) => Result;
 
 function createMockServer() {
   const handlers = new Map<string, TestHandler>();

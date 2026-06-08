@@ -5,9 +5,9 @@ import type { ConfigValidator, TenantConfig } from './types.js';
  * Validates tenant configurations using a Zod schema.
  */
 export class ZodConfigValidator implements ConfigValidator {
-  constructor(private readonly schema: ZodType) {}
+  constructor(private readonly schema: ZodType<TenantConfig>) {}
 
   validate(config: unknown): TenantConfig {
-    return this.schema.parse(config) as TenantConfig;
+    return this.schema.parse(config);
   }
 }
