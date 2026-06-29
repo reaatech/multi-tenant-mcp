@@ -41,7 +41,7 @@
     "@reaatech/multi-tenant-mcp-tenant-resolver": "workspace:*"
   },
   "devDependencies": {
-    "@types/node": "^25.9.1",
+    "@types/node": "^26.0.1",
     "tsup": "^8.4.0",
     "typescript": "^6.0.3",
     "vitest": "^4.1.6"
