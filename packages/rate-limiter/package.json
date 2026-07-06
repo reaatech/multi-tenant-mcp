@@ -41,7 +41,7 @@
     "zod": "^4.4.3"
   },
   "optionalDependencies": {
-    "redis": "^5.12.1"
+    "redis": "^6.1.0"
   },
   "devDependencies": {
     "@types/node": "^25.9.1",
