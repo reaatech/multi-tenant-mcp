@@ -48,7 +48,7 @@
     "@reaatech/multi-tenant-mcp-artifact-store": "workspace:*",
     "@reaatech/multi-tenant-mcp-config-isolation": "workspace:*",
     "@reaatech/multi-tenant-mcp-observability": "workspace:*",
-    "zod": "^4.4.3"
+    "zod": "^4.5.4"
   },
   "devDependencies": {
     "@types/node": "^25.9.1",

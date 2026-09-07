@@ -38,7 +38,7 @@
   },
   "dependencies": {
     "@reaatech/multi-tenant-mcp-types": "workspace:*",
-    "zod": "^4.4.3"
+    "zod": "^4.5.4"
   },
   "optionalDependencies": {
     "@aws-sdk/client-s3": "^3.1048.0"
